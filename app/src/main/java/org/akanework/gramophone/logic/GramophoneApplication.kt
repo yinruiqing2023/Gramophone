@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composer
 import androidx.compose.runtime.ExperimentalComposeRuntimeApi
 import androidx.fragment.app.strictmode.FragmentStrictMode
 import androidx.media3.common.util.Log
+import androidx.media3.session.DefaultMediaNotificationProvider  // ← 已添加
 import androidx.preference.PreferenceManager
 import coil3.ImageLoader
 import coil3.PlatformContext
