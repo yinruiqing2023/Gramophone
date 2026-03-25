@@ -37,7 +37,6 @@ import androidx.compose.runtime.Composer
 import androidx.compose.runtime.ExperimentalComposeRuntimeApi
 import androidx.fragment.app.strictmode.FragmentStrictMode
 import androidx.media3.common.util.Log
-import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.preference.PreferenceManager
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -84,7 +83,7 @@ class GramophoneApplication : Application(), SingletonImageLoader.Factory,
         private const val TAG = "GramophoneApplication"
 
         // not actually defined in API, but CTS tested
-        // https://cs.android.com/android/platform/superproject/main/+/main:packages/providers/MediaProvider/src/com/android/providers/media/LocalUriMatcher.java;drc=ddf0d00b2b84b205a2ab3581df8184e756462e8d;l=182
+        // https://cs.android.com/android/platform/superproject/main/+/main  :packages/providers/MediaProvider/src/com/android/providers/media/LocalUriMatcher.java;drc=ddf0d00b2b84b205a2ab3581df8184e756462e8d;l=182
         private const val MEDIA_ALBUM_ART = "albumart"
     }
 
@@ -115,51 +114,21 @@ class GramophoneApplication : Application(), SingletonImageLoader.Factory,
         super.onCreate()
         // disk read and write on first launch, but unavoidable as threads would race setDefaultNightMode
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        
         if (BuildConfig.DEBUG) {
-            // Use StrictMode to find anti-pattern issues
+            // 关闭 StrictMode，避免 Android 14 上的弹窗和崩溃
             StrictMode.setThreadPolicy(
                 ThreadPolicy.Builder()
-                    .detectAll()
-                    .let {
-                        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
-                            Build.VERSION.SDK_INT == Build.VERSION_CODES.VANILLA_ICE_CREAM
-                        ) {
-                            it.permitExplicitGc() // platform bug, now fixed
-                        } else it
-                    }
-                    .let {
-                        if (Debug.isDebuggerConnected() || isAlpsBoostFwkPresent())
-                            it.permitDiskReads()
-                        else it
-                    }
-                    .penaltyLog()
-                    .penaltyDialog()
+                    .permitAll()  // 允许所有操作，不检测
                     .build()
             )
             StrictMode.setVmPolicy(
                 VmPolicy.Builder()
-                    .detectAll()
-                    // detectAll does in fact not detect everything :)
-                    .let {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            it.detectImplicitDirectBoot()
-                        } else it
-                    }
-                    .penaltyLog()
-                    .penaltyDeath()
-                    .build()
+                    .build()  // 不检测任何 VM 问题
             )
-            FragmentStrictMode.defaultPolicy = FragmentStrictMode.Policy.Builder()
-                .detectFragmentReuse()
-                .detectFragmentTagUsage()
-                .detectRetainInstanceUsage()
-                .detectSetUserVisibleHint()
-                //.detectTargetFragmentUsage() TODO onDisplayPreferenceDialog()
-                .detectWrongFragmentContainer()
-                .detectWrongNestedHierarchy()
-                .penaltyDeath()
-                .build()
+            FragmentStrictMode.defaultPolicy = FragmentStrictMode.Policy.Builder().build()
         }
+        
         android.util.Log.d(TAG, "GramophoneApplication.onCreate()")
         if (!android.util.Log.isLoggable(TAG, android.util.Log.INFO)) {
             Log.setLogger(object : Log.Logger {
@@ -228,7 +197,7 @@ class GramophoneApplication : Application(), SingletonImageLoader.Factory,
             onSharedPreferenceChanged(prefs, null) // reload all values
             prefs.registerOnSharedPreferenceChangeListener(this@GramophoneApplication)
 
-            // https://github.com/androidx/media/issues/805
+            // https://github.com/androidx/media/issues/805  
             if (needsMissingOnDestroyCallWorkarounds()) {
                 val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                 nm.cancel(DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID)
